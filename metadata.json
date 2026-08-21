@@ -1,0 +1,11 @@
+{
+  "name": "Zoya & JARVIS - AI Voice Assistant",
+  "description": "An ultra-smart AI assistant with JARVIS Iron Man mode, live human-like phone call appointments, photo sharing, coding tutor, and cybersecurity knowledge hub.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
