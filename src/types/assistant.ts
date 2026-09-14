@@ -106,7 +106,7 @@ export interface ReactShortcut {
 
 export interface CompletedAction {
   id: string;
-  type: "call" | "photo" | "reminder";
+  type: "call" | "photo" | "reminder" | "search";
   title: string;
   recipientOrTarget?: string;
   details: string;

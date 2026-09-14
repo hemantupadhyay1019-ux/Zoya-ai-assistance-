@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Shield, Cpu, Activity, Phone, Image, Code2, Sparkles, Zap, Radio, Globe, Lock, GraduationCap, Clock, Menu, Grid, RotateCcw, Gauge, Download, Smartphone } from "lucide-react";
+import { Shield, Cpu, Activity, Phone, Image, Code2, Sparkles, Zap, Radio, Globe, Lock, GraduationCap, Clock, Menu, Grid, RotateCcw, Gauge, Download, Smartphone, Flashlight, Wifi, Bluetooth, MessageSquare, Camera, Brain, Heart, Coffee, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import AllFunctionsModal from "./AllFunctionsModal";
 
@@ -24,6 +24,11 @@ interface JarvisHudProps {
   onOpenYouTube?: () => void;
   onOpenSearch?: () => void;
   onOpenInstall?: () => void;
+  onOpenHardware?: (tab?: "torch" | "wifi" | "bluetooth") => void;
+  onOpenWhatsApp?: (recipient?: string, phone?: string, message?: string, autoSend?: boolean) => void;
+  onOpenMemory?: () => void;
+  onOpenLiveVision?: () => void;
+  activePersonName?: string;
 }
 
 export default function JarvisHud({
@@ -47,35 +52,40 @@ export default function JarvisHud({
   onOpenYouTube,
   onOpenSearch,
   onOpenInstall,
+  onOpenHardware,
+  onOpenWhatsApp,
+  onOpenMemory,
+  onOpenLiveVision,
+  activePersonName,
 }: JarvisHudProps) {
   const isJarvis = mode === "jarvis";
   const [showAllMenu, setShowAllMenu] = useState(false);
 
   return (
     <div className="w-full flex flex-col items-center gap-3 z-20 pointer-events-auto my-1">
-      {/* Mode Switcher Banner */}
-      <div className="bg-[#080d1a]/90 border border-cyan-500/30 rounded-full p-1.5 backdrop-blur-md shadow-[0_0_30px_rgba(6,182,212,0.2)] flex items-center gap-2">
+      {/* Mode Switcher: Zoya vs JARVIS */}
+      <div className="bg-[#080d1a]/95 border border-cyan-500/30 rounded-full p-1.5 backdrop-blur-md shadow-[0_0_30px_rgba(6,182,212,0.2)] flex items-center gap-1.5 sm:gap-2">
         <button
           onClick={() => onToggleMode("zoya")}
-          className={`px-4 py-1.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            !isJarvis
+          className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            mode === "zoya"
               ? "bg-gradient-to-r from-violet-600 to-pink-600 text-white shadow-lg"
               : "text-white/60 hover:text-white"
           }`}
         >
-          <span>💅 Zoya Sassy AI</span>
+          <span>💅 Zoya Sassy</span>
         </button>
 
         <button
           onClick={() => onToggleMode("jarvis")}
-          className={`px-4 py-1.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            isJarvis
+          className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            mode === "jarvis"
               ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-black shadow-[0_0_20px_rgba(6,182,212,0.5)]"
               : "text-white/60 hover:text-white"
           }`}
         >
-          <Zap size={14} className={isJarvis ? "fill-black" : ""} />
-          <span>🤖 JARVIS Iron Man Mode</span>
+          <Zap size={13} className={mode === "jarvis" ? "fill-black" : ""} />
+          <span>🤖 JARVIS</span>
         </button>
       </div>
 
@@ -118,15 +128,74 @@ export default function JarvisHud({
           </span>
         </button>
 
+        {/* WhatsApp Automated Send Button */}
+        {onOpenWhatsApp && (
+          <button
+            onClick={() => onOpenWhatsApp()}
+            className="px-3.5 py-2.5 sm:py-3 rounded-2xl bg-[#25D366]/15 border border-[#25D366]/40 hover:bg-[#25D366]/25 text-[#25D366] hover:text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-all shadow-lg hover:scale-105 cursor-pointer"
+            title="Type and Send WhatsApp Messages Automatically with Voice Dictation"
+          >
+            <MessageSquare size={15} className="text-[#25D366]" />
+            <span>WhatsApp</span>
+          </button>
+        )}
+
+        {/* Live Camera Talking & Picture Analyzer Button */}
+        {onOpenLiveVision && (
+          <button
+            onClick={onOpenLiveVision}
+            className="px-3.5 py-2.5 sm:py-3 rounded-2xl bg-cyan-500/20 border border-cyan-400/50 hover:bg-cyan-500/30 text-cyan-200 hover:text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:scale-105 cursor-pointer"
+            title="Live Camera Talking: Point camera at any picture or object, Zoya analyzes 'isme kya kya hai' and speaks aloud!"
+          >
+            <Eye size={15} className="text-cyan-300 animate-pulse" />
+            <span className="font-bold">Live Camera Talk</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+          </button>
+        )}
+
+        {/* Live Camera & Take Photo Button */}
+        <button
+          onClick={onOpenPhoto}
+          className="px-3.5 py-2.5 sm:py-3 rounded-2xl bg-pink-500/15 border border-pink-500/40 hover:bg-pink-500/25 text-pink-300 hover:text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-all shadow-lg hover:scale-105 cursor-pointer"
+          title="Open Camera, Take Photo, AI Vision Question & Answers"
+        >
+          <Camera size={15} className="text-pink-400" />
+          <span>Camera & Snap</span>
+        </button>
+
+        {/* Neural Person Memory Hub Button */}
+        {onOpenMemory && (
+          <button
+            onClick={onOpenMemory}
+            className="px-3.5 py-2.5 sm:py-3 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 hover:bg-cyan-500/25 text-cyan-300 hover:text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-all shadow-lg hover:scale-105 cursor-pointer"
+            title="Open Neural Person Memory Hub & Who is Talking"
+          >
+            <Brain size={15} className="text-cyan-400 animate-pulse" />
+            <span>Memory{activePersonName ? `: ${activePersonName}` : ""}</span>
+          </button>
+        )}
+
+        {/* Quick Hardware Controls (Torch, Wifi, Bluetooth) */}
+        {onOpenHardware && (
+          <button
+            onClick={() => onOpenHardware("torch")}
+            className="px-3.5 py-2.5 sm:py-3 rounded-2xl bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 text-amber-300 hover:text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-all shadow-lg hover:scale-105 cursor-pointer"
+            title="Mobile Torch (Flashlight), Wi-Fi & Bluetooth Controller"
+          >
+            <Flashlight size={15} className="text-amber-400" />
+            <span>Torch • Wi-Fi • BT</span>
+          </button>
+        )}
+
         {/* Direct Android Download Option */}
         {onOpenInstall && (
           <button
             onClick={onOpenInstall}
-            className="px-3.5 py-2.5 sm:py-3 rounded-2xl bg-pink-500/15 border border-pink-500/40 hover:bg-pink-500/25 text-pink-300 hover:text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-all shadow-lg hover:scale-105 cursor-pointer"
+            className="px-3.5 py-2.5 sm:py-3 rounded-2xl bg-indigo-500/15 border border-indigo-500/40 hover:bg-indigo-500/25 text-indigo-300 hover:text-white text-xs font-mono font-semibold flex items-center gap-1.5 transition-all shadow-lg hover:scale-105 cursor-pointer"
             title="Direct Download & Install Android App (1-Tap WebAPK & PWA)"
           >
-            <Download size={15} className="text-pink-400 animate-bounce" />
-            <span>Download Android App</span>
+            <Download size={15} className="text-indigo-400 animate-bounce" />
+            <span className="hidden sm:inline">Download App</span>
           </button>
         )}
 
@@ -166,6 +235,10 @@ export default function JarvisHud({
             onOpenYouTube={onOpenYouTube}
             onOpenSearch={onOpenSearch}
             onOpenInstall={onOpenInstall}
+            onOpenHardware={onOpenHardware}
+            onOpenWhatsApp={onOpenWhatsApp}
+            onOpenMemory={onOpenMemory}
+            onOpenLiveVision={onOpenLiveVision}
           />
         )}
       </AnimatePresence>

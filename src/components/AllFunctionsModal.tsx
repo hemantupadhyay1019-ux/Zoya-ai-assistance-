@@ -25,7 +25,14 @@ import {
   Tv,
   Play,
   Camera,
-  Download
+  Download,
+  Flashlight,
+  Wifi,
+  Bluetooth,
+  MessageSquare,
+  Brain,
+  Heart,
+  Eye
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -51,6 +58,10 @@ interface AllFunctionsModalProps {
   onOpenYouTube?: () => void;
   onOpenSearch?: () => void;
   onOpenInstall?: () => void;
+  onOpenHardware?: (tab?: "torch" | "wifi" | "bluetooth") => void;
+  onOpenWhatsApp?: (recipient?: string, phone?: string, message?: string, autoSend?: boolean) => void;
+  onOpenMemory?: () => void;
+  onOpenLiveVision?: () => void;
 }
 
 export default function AllFunctionsModal({
@@ -75,6 +86,10 @@ export default function AllFunctionsModal({
   onOpenYouTube,
   onOpenSearch,
   onOpenInstall,
+  onOpenHardware,
+  onOpenWhatsApp,
+  onOpenMemory,
+  onOpenLiveVision,
 }: AllFunctionsModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const isJarvis = mode === "jarvis";
@@ -88,6 +103,19 @@ export default function AllFunctionsModal({
       borderColor: "border-cyan-500/30",
       badgeColor: "text-cyan-300 bg-cyan-500/10 border-cyan-500/30",
       items: [
+        {
+          id: "person-memory",
+          title: "Neural Person Memory & Identity Hub",
+          description: "Remembers who she is talking to, their name, relationship, personal preferences & all past talking points",
+          icon: Brain,
+          iconColor: "text-pink-400",
+          action: () => {
+            onClose();
+            if (onOpenMemory) onOpenMemory();
+          },
+          tag: "Total Recall",
+          keywords: ["memory", "memories", "person", "identity", "remember", "yaad", "naam", "name", "who am i", "history", "profile"]
+        },
         {
           id: "youtube-player",
           title: "YouTube Music & Video Player",
@@ -128,6 +156,45 @@ export default function AllFunctionsModal({
       borderColor: "border-amber-500/30",
       badgeColor: "text-amber-300 bg-amber-500/10 border-amber-500/30",
       items: [
+        {
+          id: "torch-flashlight",
+          title: "Mobile Torch (Flashlight) Controller",
+          description: "Instant rear camera LED flash, ultra-bright lumen canvas, strobe & SOS emergency light",
+          icon: Flashlight,
+          iconColor: "text-amber-400",
+          action: () => {
+            onClose();
+            if (onOpenHardware) onOpenHardware("torch");
+          },
+          tag: "Hardware LED",
+          keywords: ["torch", "flashlight", "light", "flash light", "mobile light", "phone light", "led", "lamp", "strobe", "sos", "lumens"]
+        },
+        {
+          id: "wifi-network",
+          title: "Mobile Wi-Fi Controller & QR Share",
+          description: "Wi-Fi radio toggle, 5.0 GHz network scanner, real-time speed meter & 1-tap QR password sharing",
+          icon: Wifi,
+          iconColor: "text-cyan-400",
+          action: () => {
+            onClose();
+            if (onOpenHardware) onOpenHardware("wifi");
+          },
+          tag: "5.0 GHz Radio",
+          keywords: ["wifi", "wi-fi", "wife", "network", "internet", "wireless", "speed", "scan wifi", "hotspot", "wpa"]
+        },
+        {
+          id: "bluetooth-manager",
+          title: "Bluetooth 5.3 & Audio Peripherals",
+          description: "Web Bluetooth BLE pairing, headphones/speaker switcher, signal strength & chime audio test",
+          icon: Bluetooth,
+          iconColor: "text-indigo-400",
+          action: () => {
+            onClose();
+            if (onOpenHardware) onOpenHardware("bluetooth");
+          },
+          tag: "BLE 5.3 Sync",
+          keywords: ["bluetooth", "blue tooth", "ble", "pair", "headphones", "earbuds", "speaker", "smartwatch", "audio", "wireless"]
+        },
         {
           id: "download-android",
           title: "Direct Download Android App / Install PWA",
@@ -198,12 +265,51 @@ export default function AllFunctionsModal({
     },
     {
       id: "comm",
-      title: "Telephony & Language Translation",
-      description: "Automated calls, multi-language real-time translation, and email notes",
-      color: "from-cyan-500/20 to-purple-500/20",
-      borderColor: "border-cyan-500/30",
-      badgeColor: "text-cyan-300 bg-cyan-500/10 border-cyan-500/30",
+      title: "Telephony, WhatsApp & Camera Media",
+      description: "Automated WhatsApp messenger, live camera snapshot studio, phone calls, and multi-language translation",
+      color: "from-emerald-500/20 to-purple-500/20",
+      borderColor: "border-emerald-500/30",
+      badgeColor: "text-emerald-300 bg-emerald-500/10 border-emerald-500/30",
       items: [
+        {
+          id: "live-camera-talking",
+          title: "Live Camera Talking & Picture Analyzer",
+          description: "Point camera at any scene, objects, or person — Zoya analyzes 'isme kya kya hai' in real time, reads text, identifies people, and speaks aloud in natural Hindi/Hinglish!",
+          icon: Eye,
+          iconColor: "text-cyan-400",
+          action: () => {
+            onClose();
+            if (onOpenLiveVision) onOpenLiveVision();
+          },
+          tag: "Live Talking & Vision",
+          keywords: ["live camera", "camera talking", "picture analyze", "kya kya hai", "usme kya kya hai", "scene analyze", "object analyze", "camera dikha", "vision", "see", "dekh ke batao"]
+        },
+        {
+          id: "whatsapp-auto-send",
+          title: "WhatsApp Automated Messenger & Auto-Typing",
+          description: "Hands-free voice dictation, auto-typing, contact phone selector & 1-tap direct dispatch to WhatsApp Web / App",
+          icon: MessageSquare,
+          iconColor: "text-[#25D366]",
+          action: () => {
+            onClose();
+            if (onOpenWhatsApp) onOpenWhatsApp();
+          },
+          tag: "WhatsApp Auto-Send",
+          keywords: ["whatsapp", "whatshapp", "whatapp", "watshapp", "watsapp", "send message in whatshapp", "type and send", "message", "chat", "direct message", "send message in whatsapp", "durgesh", "alex", "mom"]
+        },
+        {
+          id: "photo",
+          title: "Live Camera & Take Photo Studio",
+          description: "Instant rear/front camera viewfinder, shutter snapshot capture, AI vision Q&A (OCR, math, code) & instant WhatsApp share",
+          icon: Camera,
+          iconColor: "text-pink-400",
+          action: () => {
+            onClose();
+            onOpenPhoto();
+          },
+          tag: "Live Camera & Snap",
+          keywords: ["camera", "camer", "open camera", "take photo", "click photo", "capture photo", "snap", "selfie", "take picture", "visual", "qa", "ocr", "solve", "send", "photo"]
+        },
         {
           id: "translator",
           title: "Real-Time Multi-Language Translator",
@@ -229,19 +335,6 @@ export default function AllFunctionsModal({
           },
           tag: "Active Call Engine",
           keywords: ["call", "phone", "appointment", "doctor", "dentist", "book", "dial", "telephony"]
-        },
-        {
-          id: "photo",
-          title: "Camera Scanner & Photo Visual Q&A",
-          description: "Capture live camera frame, upload photos, ask AI questions/solve math/code, and share via WhatsApp/Email",
-          icon: Camera,
-          iconColor: "text-pink-400",
-          action: () => {
-            onClose();
-            onOpenPhoto();
-          },
-          tag: "Camera Vision Q&A",
-          keywords: ["camera", "crame", "photo", "image", "visual", "qa", "question", "answer", "solve", "ocr", "send", "whatsapp", "picture", "share", "media", "attachment"]
         },
         {
           id: "email-notes",

@@ -34,6 +34,7 @@ interface PhotoShareModalProps {
   initialRecipient?: string;
   initialQuestion?: string;
   assistantMode?: "zoya" | "jarvis";
+  autoStartCamera?: boolean;
   onClose: () => void;
   onPhotoSent?: (attachment: MediaAttachment) => void;
   onSaveToFeed?: (text: string, photoUrl?: string) => void;
@@ -83,6 +84,7 @@ export default function PhotoShareModal({
   initialRecipient = "Alex",
   initialQuestion = "What is shown in this picture? Explain in detail.",
   assistantMode = "zoya",
+  autoStartCamera = true,
   onClose,
   onPhotoSent,
   onSaveToFeed
@@ -93,6 +95,7 @@ export default function PhotoShareModal({
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string>(PRESET_PHOTOS[0].url);
   const [selectedPhotoTitle, setSelectedPhotoTitle] = useState<string>(PRESET_PHOTOS[0].title);
   const [customCaption, setCustomCaption] = useState(PRESET_PHOTOS[0].caption);
+  const [shutterFlash, setShutterFlash] = useState(false);
   
   // Camera Stream state
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -100,6 +103,13 @@ export default function PhotoShareModal({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Auto-start camera on mount if requested
+  useEffect(() => {
+    if (autoStartCamera && activeTab === "camera") {
+      startCamera();
+    }
+  }, [autoStartCamera]);
 
   // Q&A State
   const [question, setQuestion] = useState(initialQuestion);
@@ -114,6 +124,26 @@ export default function PhotoShareModal({
   const [sentSuccess, setSentSuccess] = useState(false);
   const [shareChannel, setShareChannel] = useState<"whatsapp" | "email" | "sms">("whatsapp");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Synthesize camera shutter sound
+  const playShutterSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    } catch {
+      // ignore
+    }
+  };
 
   // Start Camera
   const startCamera = async (mode: "user" | "environment" = facingMode) => {
@@ -168,6 +198,10 @@ export default function PhotoShareModal({
   // Capture Frame from Video
   const captureSnapshot = () => {
     if (!videoRef.current) return;
+    playShutterSound();
+    setShutterFlash(true);
+    setTimeout(() => setShutterFlash(false), 200);
+
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth || 640;
@@ -495,6 +529,13 @@ export default function PhotoShareModal({
                       muted
                       autoPlay
                       className={`w-full h-full object-cover ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
+                    />
+
+                    {/* Camera Shutter Flash Effect */}
+                    <div
+                      className={`absolute inset-0 bg-white transition-opacity duration-150 pointer-events-none z-20 ${
+                        shutterFlash ? "opacity-90" : "opacity-0"
+                      }`}
                     />
                     
                     {/* Reticle / Camera Target Frame Overlays */}

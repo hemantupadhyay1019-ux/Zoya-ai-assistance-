@@ -1,8 +1,10 @@
 {
-  "name": "Zoya AI Assistant",
+  "id": "/",
+  "name": "Zoya & JARVIS - AI Voice Assistant",
   "short_name": "Zoya AI",
-  "description": "Sassy, ultra-smart virtual companion and AI assistant 💅",
+  "description": "An ultra-smart AI voice assistant featuring Zoya and JARVIS modes, multi-person neural memory recall, automated WhatsApp messaging, live camera photo capture, and mobile hardware controls.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0e111a",
   "theme_color": "#0e111a",
@@ -12,13 +14,25 @@
       "src": "/icon-192.jpg",
       "sizes": "192x192",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "maskable"
     }
   ]
 }

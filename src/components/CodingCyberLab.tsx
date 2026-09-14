@@ -148,6 +148,57 @@ https.get("https://api.example.com/user-data", {
       "Store secrets using HMAC-SHA256 or bcrypt / Argon2 hashing for passwords.",
       "Never hardcode private keys or secrets inside client-side code."
     ]
+  },
+  {
+    id: "cy-4",
+    title: "Mobile Security: Smartphone Defense & App Permission Auditing",
+    category: "System Hardening",
+    level: "Practical Defense",
+    summary: "How mobile operating systems isolate applications through sandboxing and how to audit app permissions against unauthorized access.",
+    howItWorks: "Mobile platforms (Android/iOS) enforce strict per-application sandboxes. Malicious apps attempt privilege escalation via sideloaded APKs or excessive runtime permissions (contacts, storage, camera, SMS).",
+    ethicalGuidance: "Auditing mobile app permissions and analyzing APK manifests helps users protect their privacy and stop unwanted background data exfiltration.",
+    vulnerabilityExample: `<!-- ❌ Overly permissive AndroidManifest.xml (Dangerous Privileges) -->
+<manifest>
+  <uses-permission android:name="android.permission.READ_CONTACTS" />
+  <uses-permission android:name="android.permission.READ_SMS" />
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+</manifest>`,
+    patchCode: `<!-- ✅ Principle of Least Privilege: Only request necessary permissions at runtime -->
+<!-- Use scoped storage and system pickers without granting direct file access -->
+<manifest>
+  <uses-permission android:name="android.permission.INTERNET" />
+</manifest>`,
+    preventionSteps: [
+      "Regularly review App Permissions in Settings > Privacy > Permission Manager.",
+      "Only install apps from verified official app stores and verify developer credentials.",
+      "Enable Google Play Protect and avoid enabling 'Install Unknown Apps / Sideloading'.",
+      "Keep the mobile operating system and security patches up to date."
+    ]
+  },
+  {
+    id: "cy-5",
+    title: "Data Protection: Device Encryption & Secure File Sharing",
+    category: "Cryptography",
+    level: "Architectural Security",
+    summary: "Understanding hardware-backed mobile encryption (FBE/FDE) and authenticated file transfer protocols.",
+    howItWorks: "Modern mobile phones use File-Based Encryption (FBE) where cryptographic keys are tied to the device's hardware Secure Enclave/TrustZone. Data cannot be extracted without the master user passcode.",
+    ethicalGuidance: "Ethical cybersecurity engineers deploy zero-knowledge protocols and end-to-end encryption to guarantee that only the intended recipient can decrypt files.",
+    vulnerabilityExample: `// ❌ Insecure unencrypted local file transfer over cleartext HTTP
+const socket = new WebSocket("ws://192.168.1.50:8080");
+socket.send(rawSensitiveFileData);`,
+    patchCode: `// ✅ Authenticated AES-GCM-256 encrypted file transfer with TLS
+const encryptedPayload = await crypto.subtle.encrypt(
+  { name: "AES-GCM", iv: cryptographicIV },
+  recipientPublicKey,
+  fileArrayBuffer
+);
+await fetch("https://secure-vault.internal/transfer", { method: "POST", body: encryptedPayload });`,
+    preventionSteps: [
+      "Always set a strong screen lock (PIN, password, or biometric key).",
+      "Use end-to-end encrypted sharing mechanisms (AirDrop, Quick Share, or encrypted vault sync).",
+      "Enable remote wipe capabilities (Find My Device) in case a phone is misplaced."
+    ]
   }
 ];
 

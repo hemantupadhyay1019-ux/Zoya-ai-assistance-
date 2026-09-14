@@ -1,6 +1,6 @@
 {
   "name": "Zoya & JARVIS - AI Voice Assistant",
-  "description": "An ultra-smart AI assistant with JARVIS Iron Man mode, live human-like phone call appointments, photo sharing, coding tutor, and cybersecurity knowledge hub.",
+  "description": "An ultra-smart AI voice assistant featuring Zoya and JARVIS modes, multi-person neural memory recall, advanced Google search with live grounding, chromosome & genomic karyotype intelligence, in-app website access and browsing, automated WhatsApp messaging, and mobile hardware controls.",
   "requestFramePermissions": [
     "microphone",
     "camera"

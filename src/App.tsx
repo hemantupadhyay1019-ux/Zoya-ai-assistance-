@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Loader2, Volume2, VolumeX, Keyboard, Send, Trash2, MessageSquare, X, Globe, ExternalLink, Sparkles, Smartphone, Phone, Image, Code2, ShieldAlert, Cpu, ListChecks, Clock, CheckCircle2, Search, Filter, Calendar, Wifi, WifiOff, Mail, Languages, RefreshCw, Tv, Play, Camera, Download } from "lucide-react";
-import { getZoyaResponse, getZoyaAudio, resetZoyaSession, getZoyaSearchSummary } from "./services/geminiService";
+import { Mic, MicOff, Loader2, Volume2, VolumeX, Keyboard, Send, Trash2, MessageSquare, X, Globe, ExternalLink, Sparkles, Smartphone, Phone, Image, Code2, ShieldAlert, Cpu, ListChecks, Clock, CheckCircle2, Search, Filter, Calendar, Wifi, WifiOff, Mail, Languages, RefreshCw, Tv, Play, Camera, Download, Flashlight, Bluetooth, Brain, Heart, Coffee, Dna, Eye } from "lucide-react";
+import { getZoyaResponse, getZoyaAudio, resetZoyaSession, getZoyaSearchSummary, getZoyaChromosomeSearch, getZoyaWebsiteAnalysis, cleanGroundingUrl } from "./services/geminiService";
 import { processCommand } from "./services/commandService";
+import { getActivePerson, getAllPersons, setActivePersonId, findOrCreatePerson, addMemoryToPerson, introducePerson, recordConversationTurn, PersonProfile, getPersonDetails } from "./services/memoryService";
 import { LiveSessionManager } from "./services/liveService";
 import Visualizer from "./components/Visualizer";
 import PermissionModal from "./components/PermissionModal";
 import InstallModal from "./components/InstallModal";
 import PhoneCallModal from "./components/PhoneCallModal";
 import PhotoShareModal from "./components/PhotoShareModal";
+import WhatsAppModal from "./components/WhatsAppModal";
+import GoogleSearchModal from "./components/GoogleSearchModal";
 import CodingCyberLab from "./components/CodingCyberLab";
 import TeacherClassroomModal from "./components/TeacherClassroomModal";
 import ReactShortcutsModal from "./components/ReactShortcutsModal";
@@ -16,6 +19,10 @@ import EmailNotesModal from "./components/EmailNotesModal";
 import TranslationModal from "./components/TranslationModal";
 import AutoUpdateModal from "./components/AutoUpdateModal";
 import MobileSystemControlModal from "./components/MobileSystemControlModal";
+import DeviceControlModal from "./components/DeviceControlModal";
+import PersonMemoryModal from "./components/PersonMemoryModal";
+import { LiveVisionStreamModal } from "./components/LiveVisionStreamModal";
+import { hardwareManager } from "./services/hardwareService";
 import { YouTubeModal } from "./components/YouTubeModal";
 import JarvisHud from "./components/JarvisHud";
 import { playPCM, speakTextFallback } from "./utils/audioUtils";
@@ -46,7 +53,10 @@ declare global {
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>("idle");
-  const [assistantMode, setAssistantMode] = useState<"zoya" | "jarvis">("zoya");
+  const [assistantMode, setAssistantMode] = useState<"zoya" | "jarvis">(() => {
+    const saved = localStorage.getItem("zoya_assistant_mode");
+    return saved === "jarvis" ? "jarvis" : "zoya";
+  });
   const [showCallModal, setShowCallModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [showLabModal, setShowLabModal] = useState(false);
@@ -56,6 +66,8 @@ export default function App() {
   const [showTranslationModal, setShowTranslationModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showMobileControlModal, setShowMobileControlModal] = useState(false);
+  const [showHardwareModal, setShowHardwareModal] = useState(false);
+  const [hardwareTab, setHardwareTab] = useState<"torch" | "wifi" | "bluetooth">("torch");
   const [showYouTubeModal, setShowYouTubeModal] = useState(false);
   const [youtubeQuery, setYoutubeQuery] = useState("Arijit Singh songs");
   const [systemVersion, setSystemVersion] = useState(() => {
@@ -64,6 +76,41 @@ export default function App() {
   const [labTab, setLabTab] = useState<"coding" | "cybersecurity">("coding");
   const [callRecipient, setCallRecipient] = useState("Dr. Sharma Dental Clinic");
   const [photoRecipient, setPhotoRecipient] = useState("Alex");
+  const [photoAutoStartCamera, setPhotoAutoStartCamera] = useState(true);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsappRecipient, setWhatsappRecipient] = useState("Alex");
+  const [whatsappPhone, setWhatsappPhone] = useState("+91 98765 43210");
+  const [whatsappInitialMessage, setWhatsappInitialMessage] = useState("");
+  const [whatsappAutoSend, setWhatsappAutoSend] = useState(false);
+  const [showGoogleSearchModal, setShowGoogleSearchModal] = useState(false);
+  const [googleSearchQuery, setGoogleSearchQuery] = useState("Today's top world news");
+  const [googleSearchMode, setGoogleSearchMode] = useState<"google" | "chromosome" | "website">("google");
+  const [showMemoryModal, setShowMemoryModal] = useState(false);
+  const [showLiveVisionModal, setShowLiveVisionModal] = useState(false);
+  const [liveVisionInitialQuery, setLiveVisionInitialQuery] = useState<string>("");
+  const [activePerson, setActivePerson] = useState<PersonProfile>(() => getActivePerson());
+  const [isOffline, setIsOffline] = useState<boolean>(
+    typeof navigator !== "undefined" ? !navigator.onLine : false
+  );
+  const [isMuted, setIsMuted] = useState(false);
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [textInput, setTextInput] = useState("");
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [permissionErrorMsg, setPermissionErrorMsg] = useState<string>("");
+  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [sentiment, setSentiment] = useState<ZoyaSentiment>("neutral");
+  const [showChatPanel, setShowChatPanel] = useState(false);
+  const [talkSpeed, setTalkSpeed] = useState<number>(1.0);
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [currentRoastIndex, setCurrentRoastIndex] = useState(0);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState("durgeshu49@gmail.com");
+  const [emailPresetSubject, setEmailPresetSubject] = useState("");
+  const [emailPresetBody, setEmailPresetBody] = useState("");
+  const [isPhoneMode, setIsPhoneMode] = useState<boolean>(true);
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     const saved = localStorage.getItem("zoya_chat_history");
@@ -77,19 +124,8 @@ export default function App() {
     return [];
   });
   const messagesRef = useRef(messages);
-
-  useEffect(() => {
-    messagesRef.current = messages;
-    localStorage.setItem("zoya_chat_history", JSON.stringify(messages));
-  }, [messages]);
-
-  const [isMuted, setIsMuted] = useState(false);
-
-  useEffect(() => {
-    if (liveSessionRef.current) {
-      liveSessionRef.current.isMuted = isMuted;
-    }
-  }, [isMuted]);
+  const liveSessionRef = useRef<LiveSessionManager | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const DEFAULT_COMPLETED_ACTIONS: CompletedAction[] = [
     {
@@ -136,13 +172,24 @@ export default function App() {
     return DEFAULT_COMPLETED_ACTIONS;
   });
 
-  useEffect(() => {
-    localStorage.setItem("zoya_completed_actions", JSON.stringify(completedActions));
-  }, [completedActions]);
-
   const [chatTab, setChatTab] = useState<"feed" | "actions">("feed");
   const [actionFilter, setActionFilter] = useState<"all" | "call" | "photo" | "reminder">("all");
   const [actionSearchQuery, setActionSearchQuery] = useState("");
+
+  useEffect(() => {
+    messagesRef.current = messages;
+    localStorage.setItem("zoya_chat_history", JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    if (liveSessionRef.current) {
+      liveSessionRef.current.isMuted = isMuted;
+    }
+  }, [isMuted]);
+
+  useEffect(() => {
+    localStorage.setItem("zoya_completed_actions", JSON.stringify(completedActions));
+  }, [completedActions]);
 
   const logCompletedAction = (actionData: Omit<CompletedAction, "id" | "timestamp"> & { timestamp?: string }) => {
     const newAction: CompletedAction = {
@@ -217,36 +264,27 @@ export default function App() {
     return matchesFilter && matchesSearch;
   });
 
-  const [showTextInput, setShowTextInput] = useState(false);
-  const [textInput, setTextInput] = useState("");
-  const [isSearchMode, setIsSearchMode] = useState(false);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [permissionErrorMsg, setPermissionErrorMsg] = useState<string>("");
-  const [isSessionActive, setIsSessionActive] = useState(false);
-  const [sentiment, setSentiment] = useState<ZoyaSentiment>("neutral");
-  const [showChatPanel, setShowChatPanel] = useState(false);
-  const [talkSpeed, setTalkSpeed] = useState<number>(1.0);
-
-  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
-  const [currentRoastIndex, setCurrentRoastIndex] = useState(0);
-  const [liveTranscript, setLiveTranscript] = useState("");
-  const [showInstallModal, setShowInstallModal] = useState(false);
-
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailRecipient, setEmailRecipient] = useState("durgeshu49@gmail.com");
-  const [emailPresetSubject, setEmailPresetSubject] = useState("");
-  const [emailPresetBody, setEmailPresetBody] = useState("");
-  const [isPhoneMode, setIsPhoneMode] = useState<boolean>(true);
-
   const handleOpenEmailNotes = useCallback((subject?: string, body?: string) => {
     if (subject) setEmailPresetSubject(subject);
     if (body) setEmailPresetBody(body);
     setShowEmailModal(true);
   }, []);
 
-  const [isOffline, setIsOffline] = useState<boolean>(
-    typeof navigator !== "undefined" ? !navigator.onLine : false
-  );
+  const handleOpenWhatsApp = useCallback((recipient?: string, phone?: string, message?: string, autoSend?: boolean) => {
+    if (recipient) setWhatsappRecipient(recipient);
+    if (phone) setWhatsappPhone(phone);
+    if (message) setWhatsappInitialMessage(message);
+    setWhatsappAutoSend(!!autoSend);
+    setShowWhatsAppModal(true);
+  }, []);
+
+  const handleOpenGoogleSearch = useCallback((searchQuery?: string, mode: "google" | "chromosome" | "website" = "google") => {
+    if (searchQuery && searchQuery.trim()) {
+      setGoogleSearchQuery(searchQuery.trim());
+    }
+    setGoogleSearchMode(mode);
+    setShowGoogleSearchModal(true);
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -305,9 +343,6 @@ export default function App() {
     }
   }, []);
 
-  const liveSessionRef = useRef<LiveSessionManager | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -364,11 +399,72 @@ export default function App() {
       setSentiment(detected);
       setMessages((prev) => [...prev, { id: Date.now().toString() + "-z", sender: "zoya", text: responseText }]);
       await playAudioOrFallback(responseText);
+    } else if (commandResult.isWhatsAppAction) {
+      const recipient = commandResult.whatsappRecipient || commandResult.recipient || "Durgesh";
+      const phone = commandResult.whatsappPhone || "+919876543210";
+      const msg = commandResult.whatsappMessage || "";
+      const autoSend = !!commandResult.autoSendWhatsApp;
+
+      setWhatsappRecipient(recipient);
+      setWhatsappPhone(phone);
+      setWhatsappInitialMessage(msg);
+      setWhatsappAutoSend(autoSend);
+      setShowWhatsAppModal(true);
+
+      if (autoSend && msg) {
+        responseText = `Automatic WhatsApp dispatch initiated! Typing and sending message to ${recipient} (${phone}): "${msg}"`;
+      } else {
+        responseText = `Opening WhatsApp Messenger for ${recipient} (${phone}). Ready to type and send your message!`;
+      }
+
+      const detected = detectSentiment(responseText);
+      setSentiment(detected);
+      setMessages((prev) => [...prev, { id: Date.now().toString() + "-z", sender: "zoya", text: responseText }]);
+      await playAudioOrFallback(responseText);
     } else if (commandResult.isPhotoAction) {
       const recipient = commandResult.recipient || "Alex";
       setPhotoRecipient(recipient);
+      setPhotoAutoStartCamera(commandResult.autoStartCamera !== false);
       setShowPhotoModal(true);
-      responseText = `Opening Photo Dispatcher to send media to ${recipient}!`;
+      responseText = commandResult.autoStartCamera
+        ? "Opening Live Camera & Take Photo Studio! Viewfinder active, Hemant."
+        : `Opening Photo Dispatcher to send media to ${recipient}!`;
+      const detected = detectSentiment(responseText);
+      setSentiment(detected);
+      setMessages((prev) => [...prev, { id: Date.now().toString() + "-z", sender: "zoya", text: responseText }]);
+      await playAudioOrFallback(responseText);
+    } else if (commandResult.isHardwareAction) {
+      const tab = commandResult.hardwareTab || "torch";
+      setHardwareTab(tab);
+      setShowHardwareModal(true);
+
+      if (tab === "torch") {
+        if (commandResult.torchState !== undefined) {
+          await hardwareManager.toggleTorch(commandResult.torchState);
+        } else {
+          await hardwareManager.toggleTorch();
+        }
+        responseText = commandResult.torchState === false 
+          ? "Switching OFF Mobile Torch / Flashlight for you, Hemant!" 
+          : "Turning ON Mobile Torch (Camera LED / Screen Max Lumens) for you, Hemant! 💡";
+      } else if (tab === "wifi") {
+        if (commandResult.wifiState !== undefined) {
+          hardwareManager.toggleWifi(commandResult.wifiState);
+        }
+        responseText = commandResult.wifiState === false
+          ? "Disconnected Wi-Fi connection for you, Hemant."
+          : "Launching Mobile Wi-Fi Controller & Network Manager! Scanning 5.0 GHz wireless bands for Hemant. 📶";
+      } else if (tab === "bluetooth") {
+        if (commandResult.bluetoothState !== undefined) {
+          hardwareManager.toggleBluetooth(commandResult.bluetoothState);
+        }
+        responseText = commandResult.bluetoothState === false
+          ? "Disabled Bluetooth radio."
+          : "Launching Bluetooth 5.3 BLE Manager! Scanning nearby headphones, earbuds & speakers for Hemant. 🎧";
+      } else {
+        responseText = `Executing ${commandResult.action} for you, Hemant!`;
+      }
+
       const detected = detectSentiment(responseText);
       setSentiment(detected);
       setMessages((prev) => [...prev, { id: Date.now().toString() + "-z", sender: "zoya", text: responseText }]);
@@ -456,16 +552,40 @@ export default function App() {
       await playAudioOrFallback(responseText);
     } else if (commandResult.isSearchAction && commandResult.query) {
       const searchQuery = commandResult.query;
+      const isChr = commandResult.isChromosomeAction || commandResult.searchMode === "chromosome";
+      const isWeb = commandResult.isWebsiteAccessAction || commandResult.searchMode === "website";
+      const targetMode: "google" | "chromosome" | "website" = isChr ? "chromosome" : isWeb ? "website" : "google";
+      
+      setGoogleSearchMode(targetMode);
+      setGoogleSearchQuery(searchQuery);
+      setShowGoogleSearchModal(true);
       setAppState("processing");
       
       const searchStatusMsgId = Date.now().toString() + "-status";
+      const statusText = isChr 
+        ? `Analyzing Chromosomes & Genetic Sequences for "${searchQuery}"... Ek second, Hemant!` 
+        : isWeb 
+        ? `Accessing and inspecting website ${commandResult.websiteUrl || searchQuery}... Ek second, Hemant!`
+        : `Searching Google for "${searchQuery}"... Ek second, Hemant!`;
+
       setMessages((prev) => [...prev, { 
         id: searchStatusMsgId, 
         sender: "zoya", 
-        text: `Searching Google for "${searchQuery}"... Ek second, Hemant!` 
+        text: statusText 
       }]);
 
-      const searchResult = await getZoyaSearchSummary(searchQuery);
+      let searchResult: { text: string; sources: { title: string; url: string }[] };
+      if (isChr) {
+        searchResult = await getZoyaChromosomeSearch(searchQuery, assistantMode);
+      } else if (isWeb) {
+        const webAnalysis = await getZoyaWebsiteAnalysis(commandResult.websiteUrl || searchQuery, assistantMode);
+        searchResult = {
+          text: webAnalysis.text,
+          sources: webAnalysis.sources
+        };
+      } else {
+        searchResult = await getZoyaSearchSummary(searchQuery, assistantMode);
+      }
       
       setMessages((prev) => {
         const filtered = prev.filter(m => m.id !== searchStatusMsgId);
@@ -481,8 +601,108 @@ export default function App() {
         }];
       });
 
+      logCompletedAction({
+        type: "search",
+        title: isChr ? `Genomics Search: "${searchQuery}"` : isWeb ? `Website Access: "${searchQuery}"` : `Google Search: "${searchQuery}"`,
+        recipientOrTarget: isChr ? "Genomic Karyotype Core" : isWeb ? "Web Inspector" : "Google Web Grounding",
+        details: searchResult.text.substring(0, 150) + "...",
+        status: "Completed"
+      });
+
       await playAudioOrFallback(searchResult.text);
       setShowChatPanel(true);
+    } else if (commandResult.isLiveVisionAction) {
+      const userQ = commandResult.liveVisionQuestion || "";
+      setLiveVisionInitialQuery(userQ);
+      setShowLiveVisionModal(true);
+      responseText = assistantMode === "jarvis"
+        ? "Optical HUD active. Real-time vision sensors engaged. Optical analysis decomposing scene elements, objects, and personnel."
+        : "Live Camera Talking Shuru! Maine camera on kar diya hai. Saamne picture ya cheezein dikhaiye — main analyze karke batati hoon usme kya kya hai!";
+      const detected = detectSentiment(responseText);
+      setSentiment(detected);
+      setMessages((prev) => [...prev, { id: Date.now().toString() + "-z", sender: "zoya", text: responseText }]);
+      await playAudioOrFallback(responseText);
+    } else if (commandResult.isMemoryAction) {
+      if (commandResult.memorySubAction === "person_details") {
+        let targetId = activePerson.id;
+        if (commandResult.targetPersonName) {
+          const matched = getAllPersons().find((p) =>
+            p.name.toLowerCase().includes(commandResult.targetPersonName!.toLowerCase())
+          );
+          if (matched) {
+            targetId = matched.id;
+          }
+        }
+        const personDetails = getPersonDetails(targetId, assistantMode);
+        responseText = personDetails.speechText;
+        const detected = detectSentiment(responseText);
+        setSentiment(detected);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString() + "-z",
+            sender: "zoya",
+            text: `${personDetails.displayText}\n\n${personDetails.speechText}`,
+          },
+        ]);
+        await playAudioOrFallback(personDetails.speechText);
+      } else if (commandResult.memorySubAction === "introduce_person" && commandResult.targetPersonName) {
+        const introduced = introducePerson({
+          name: commandResult.targetPersonName,
+          relationship: commandResult.targetPersonRelationship || "Friend of Hemant",
+          introducedBy: commandResult.introducedBy || "Hemant (Owner)",
+          initialNotes: `Introduced by Hemant: "${finalTranscript}"`,
+        });
+        setActivePerson(introduced);
+        resetZoyaSession();
+        responseText = assistantMode === "jarvis"
+          ? `Subject introduced: ${introduced.name}, designated as ${introduced.relationship}. Introduced by ${introduced.introducedBy}. Neural identity profile generated.`
+          : `Aaye haye! Hello ${introduced.name}! Hemant ne mujhe aapke baare mein bataya tha ki aap unke ${introduced.relationship} hain. Welcome! Main aapki har baat hamesha yaad rakhungi!`;
+      } else if (commandResult.memorySubAction === "switch_person" && commandResult.targetPersonName) {
+        const switched = findOrCreatePerson(commandResult.targetPersonName);
+        setActivePerson(switched);
+        resetZoyaSession();
+        responseText = assistantMode === "jarvis"
+          ? `Neural identity protocol switched to ${switched.name}. Active memory records loaded.`
+          : `Arre wah! Maine switch kar liya. Namaste ${switched.name}! Kaise ho aap? Mujhe aapki har baat aur pichli conversations yaad hain!`;
+      } else if (commandResult.memorySubAction === "who_am_i") {
+        const person = getActivePerson();
+        const talks = person.talkCount || (person as any).totalConversations || 1;
+        responseText = assistantMode === "jarvis"
+          ? `Identity scan complete: You are recognized as ${person.name}, role: ${person.relationship}. We have logged ${talks} conversation sessions with ${person.memories?.length || 0} facts stored in the memory vault.`
+          : `Aapka naam ${person.name} hai! Aap mere ${person.relationship} hain. Humne ab tak ${talks} baar baat ki hai, aur mujhe aapke baare me ${person.memories?.length || 0} baatein achhe se yaad hain!`;
+      } else if (commandResult.memorySubAction === "what_remembered") {
+        const person = getActivePerson();
+        if (!person.memories || person.memories.length === 0) {
+          responseText = assistantMode === "jarvis"
+            ? `No recorded personal memories found for ${person.name}. You may dictate preferences or facts to store them.`
+            : `Suno ${person.name}, abhi tak aapke baare me koi specific memory save nahi hui hai. Kuch bhi bataiye—jaise aapki pasand ya routine—main turant yaad kar lungi!`;
+        } else {
+          const listStr = person.memories.slice(0, 5).map(m => m.content).join(". ");
+          responseText = assistantMode === "jarvis"
+            ? `Accessing memory vault for ${person.name}. Recorded items include: ${listStr}. Total entries: ${person.memories.length}.`
+            : `Mujhe aapke baare me yeh sab yaad hai ${person.name}: ${listStr}. Aapki koi bhi baat main nahi bhoolti!`;
+        }
+      } else if (commandResult.memorySubAction === "add_memory" && commandResult.memoryText) {
+        const person = getActivePerson();
+        addMemoryToPerson(person.id, commandResult.memoryText, "preference", "manual");
+        const updated = getActivePerson();
+        setActivePerson(updated);
+        resetZoyaSession();
+        responseText = assistantMode === "jarvis"
+          ? `Memory stored securely in ${person.name}'s vault: "${commandResult.memoryText}".`
+          : `Done ${person.name}! Maine aapki memory vault me permanently save kar liya: "${commandResult.memoryText}". Main hamesha yaad rakhungi!`;
+      } else {
+        setShowMemoryModal(true);
+        responseText = assistantMode === "jarvis"
+          ? `Opening neural memory management vault.`
+          : `Opening memory vault! Yahan aap dekh sakte hain ki main kisse baat kar rahi hoon aur mujhe unki kya kya baatein yaad hain.`;
+      }
+
+      const detected = detectSentiment(responseText);
+      setSentiment(detected);
+      setMessages((prev) => [...prev, { id: Date.now().toString() + "-z", sender: "zoya", text: responseText }]);
+      await playAudioOrFallback(responseText);
     } else if (commandResult.isBrowserAction) {
       let targetUrl = commandResult.url || "";
       if (targetUrl) {
@@ -502,14 +722,15 @@ export default function App() {
       await playAudioOrFallback(responseText);
     } else {
       // 2. General Chit-Chat via Gemini
-      responseText = await getZoyaResponse(finalTranscript, messagesRef.current);
+      responseText = await getZoyaResponse(finalTranscript, messagesRef.current, activePerson, assistantMode);
+      recordConversationTurn(activePerson.id, finalTranscript, responseText);
       const detected = detectSentiment(responseText);
       setSentiment(detected);
       setMessages((prev) => [...prev, { id: Date.now().toString() + "-z", sender: "zoya", text: responseText }]);
       
       await playAudioOrFallback(responseText);
     }
-  }, [isMuted, isSessionActive, talkSpeed, playAudioOrFallback]);
+  }, [isMuted, isSessionActive, talkSpeed, playAudioOrFallback, assistantMode, activePerson]);
 
   const triggerSassyPhrase = useCallback((phrase: string) => {
     handleTextCommand(`Say your catchphrase: "${phrase}"`);
@@ -695,11 +916,53 @@ export default function App() {
         />
       )}
 
+      {/* WhatsApp Automated Messenger Modal */}
+      {showWhatsAppModal && (
+        <WhatsAppModal
+          initialRecipient={whatsappRecipient}
+          initialPhone={whatsappPhone}
+          initialMessage={whatsappInitialMessage}
+          autoSendOnOpen={whatsappAutoSend}
+          onClose={() => setShowWhatsAppModal(false)}
+          onMessageSent={(recipient, phone, message) => {
+            logCompletedAction({
+              type: "reminder",
+              title: `WhatsApp Message to ${recipient}`,
+              recipientOrTarget: `${recipient} (${phone})`,
+              details: `Sent message: "${message}"`,
+              status: "Sent"
+            });
+          }}
+        />
+      )}
+
+      {/* Google Real-Time Web Search Modal */}
+      {showGoogleSearchModal && (
+        <GoogleSearchModal
+          initialQuery={googleSearchQuery}
+          initialMode={googleSearchMode}
+          assistantMode={assistantMode}
+          onClose={() => setShowGoogleSearchModal(false)}
+          onShareToWhatsApp={(text) => {
+            setShowGoogleSearchModal(false);
+            handleOpenWhatsApp("Alex", "+91 98765 43210", text);
+          }}
+          onShareToEmail={(subject, body) => {
+            setShowGoogleSearchModal(false);
+            handleOpenEmailNotes(subject, body);
+          }}
+          onSpeak={(text) => {
+            playAudioOrFallback(text);
+          }}
+        />
+      )}
+
       {/* Photo Share & Camera Visual Q&A Modal */}
       {showPhotoModal && (
         <PhotoShareModal
           initialRecipient={photoRecipient}
           assistantMode={assistantMode}
+          autoStartCamera={photoAutoStartCamera}
           onClose={() => setShowPhotoModal(false)}
           onPhotoSent={handlePhotoSent}
           onSaveToFeed={(text, photoUrl) => {
@@ -780,6 +1043,48 @@ export default function App() {
         />
       )}
 
+      {/* Mobile Hardware Controller Modal (Torch, Wi-Fi, Bluetooth) */}
+      {showHardwareModal && (
+        <DeviceControlModal
+          initialTab={hardwareTab}
+          onClose={() => setShowHardwareModal(false)}
+        />
+      )}
+
+      {/* Multi-Person Neural Memory & Total Recall Vault */}
+      {showMemoryModal && (
+        <PersonMemoryModal
+          assistantMode={assistantMode}
+          onClose={() => setShowMemoryModal(false)}
+          onSpeak={(text) => playAudioOrFallback(text)}
+          onActivePersonChange={(person) => {
+            setActivePerson(person);
+            resetZoyaSession();
+          }}
+          onToggleMode={(m) => {
+            setAssistantMode(m);
+            localStorage.setItem("zoya_assistant_mode", m);
+          }}
+        />
+      )}
+
+      {/* Live Stream Talking & Real-Time Computer Vision HUD */}
+      {showLiveVisionModal && (
+        <LiveVisionStreamModal
+          assistantMode={assistantMode}
+          initialQuestion={liveVisionInitialQuery}
+          onClose={() => {
+            setShowLiveVisionModal(false);
+            setLiveVisionInitialQuery("");
+          }}
+          onSpeak={(text) => playAudioOrFallback(text)}
+          onPersonUpdated={(person) => {
+            setActivePerson(person);
+            resetZoyaSession();
+          }}
+        />
+      )}
+
       {/* YouTube Player & Streaming Modal */}
       {showYouTubeModal && (
         <YouTubeModal
@@ -814,7 +1119,7 @@ export default function App() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-serif font-medium tracking-wide opacity-90">
+              <h1 className="text-xl font-serif font-medium tracking-wide opacity-90 flex items-center gap-1.5">
                 {assistantMode === "jarvis" ? "JARVIS AI Core" : "Zoya"}
               </h1>
               {isOffline && (
@@ -835,6 +1140,19 @@ export default function App() {
             >
               <Download size={14} className="text-pink-400 animate-bounce" />
               <span className="font-bold whitespace-nowrap">Download App</span>
+            </button>
+
+            {/* Hardware Quick Controls (Torch / Flashlight, Wi-Fi, Bluetooth) */}
+            <button
+              onClick={() => {
+                setHardwareTab("torch");
+                setShowHardwareModal(true);
+              }}
+              className="px-3 py-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-white flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-all duration-300 pointer-events-auto cursor-pointer shadow-md hover:scale-105"
+              title="Mobile Hardware Hub: Torch (Flashlight), Wi-Fi & Bluetooth"
+            >
+              <Flashlight size={14} className="text-amber-400" />
+              <span className="hidden sm:inline">Torch • Wi-Fi • BT</span>
             </button>
 
             <button
@@ -890,8 +1208,71 @@ export default function App() {
               )}
             </button>
 
+            {/* Live Camera Talking & Picture Scene Analyzer Button */}
             <button
-              onClick={() => setShowPhotoModal(true)}
+              onClick={() => setShowLiveVisionModal(true)}
+              className="px-3.5 py-1.5 rounded-full border border-cyan-400/60 bg-gradient-to-r from-cyan-500/25 via-teal-500/25 to-blue-500/25 hover:from-cyan-500/40 hover:to-blue-500/40 text-cyan-200 hover:text-white flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-all duration-300 pointer-events-auto cursor-pointer shadow-[0_0_18px_rgba(6,182,212,0.4)] hover:scale-105"
+              title="Live Camera Talking: Point camera at any object or scene — Zoya analyzes what is in it ('usme kya kya hai') and speaks aloud!"
+            >
+              <Eye size={14} className="text-cyan-300 animate-pulse" />
+              <span className="font-bold whitespace-nowrap">Live Camera Talk</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            </button>
+
+            {/* Multi-Person Memory Vault Indicator & Switcher */}
+            <button
+              onClick={() => setShowMemoryModal(true)}
+              className="px-3 py-1.5 rounded-full border border-pink-500/40 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 hover:text-white flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-all duration-300 pointer-events-auto cursor-pointer shadow-md hover:scale-105"
+              title={`Memory Vault Active for ${activePerson.name} (${activePerson.memories?.length || 0} memories remembered)`}
+            >
+              <Brain size={14} className="text-pink-400 animate-pulse" />
+              <span>Memory: <b className="text-white font-sans">{activePerson.name}</b></span>
+              <span className="px-1.5 py-0.2 rounded-full bg-pink-400 text-black font-bold text-[9px]">
+                {activePerson.memories?.length || 0}
+              </span>
+            </button>
+
+            <button
+              onClick={() => handleOpenGoogleSearch()}
+              className="px-3 py-1.5 rounded-full border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 hover:text-white flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-all duration-300 pointer-events-auto cursor-pointer shadow-md hover:scale-105"
+              title="Google Live Search & Web Grounding"
+            >
+              <Search size={14} className="text-blue-400" />
+              <span className="hidden xs:inline">Google Search</span>
+            </button>
+
+            <button
+              onClick={() => handleOpenGoogleSearch("Chromosome 21 (Down Syndrome)", "chromosome")}
+              className="px-3 py-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-white flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-all duration-300 pointer-events-auto cursor-pointer shadow-md hover:scale-105"
+              title="Chromosomes & Cytogenetics Explorer (1-22, X, Y)"
+            >
+              <Dna size={14} className="text-emerald-400" />
+              <span className="hidden sm:inline">Chromosomes</span>
+            </button>
+
+            <button
+              onClick={() => handleOpenGoogleSearch("https://en.wikipedia.org/wiki/Chromosome", "website")}
+              className="px-3 py-1.5 rounded-full border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 hover:text-white flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-all duration-300 pointer-events-auto cursor-pointer shadow-md hover:scale-105"
+              title="Access Any Website & In-App Web Browser"
+            >
+              <Globe size={14} className="text-cyan-400" />
+              <span className="hidden sm:inline">Web Browser</span>
+            </button>
+
+            <button
+              onClick={() => handleOpenWhatsApp()}
+              className="px-3 py-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 hover:text-white flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-all duration-300 pointer-events-auto cursor-pointer shadow-md hover:scale-105"
+              title="WhatsApp Auto-Messenger (Type & Send Automatically)"
+            >
+              <MessageSquare size={14} className="text-emerald-400" />
+              <span className="hidden xs:inline">WhatsApp</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setPhotoAutoStartCamera(true);
+                setShowPhotoModal(true);
+              }}
               className="px-3 py-1.5 rounded-full border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 hover:text-white flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider transition-all duration-300 pointer-events-auto cursor-pointer"
               title="Camera Scanner, Photo Questions & Answers Studio"
             >
@@ -981,9 +1362,16 @@ export default function App() {
           talkSpeed={talkSpeed}
           onSetTalkSpeed={setTalkSpeed}
           onRestartSystem={handleRestartSystem}
-          onToggleMode={(m) => setAssistantMode(m)}
+          onToggleMode={(m) => {
+            setAssistantMode(m);
+            localStorage.setItem("zoya_assistant_mode", m);
+          }}
           onOpenCall={() => setShowCallModal(true)}
-          onOpenPhoto={() => setShowPhotoModal(true)}
+          onOpenPhoto={() => {
+            setPhotoAutoStartCamera(true);
+            setShowPhotoModal(true);
+          }}
+          onOpenWhatsApp={() => handleOpenWhatsApp()}
           onOpenCoding={() => {
             setLabTab("coding");
             setShowLabModal(true);
@@ -1008,10 +1396,16 @@ export default function App() {
             setShowYouTubeModal(true);
           }}
           onOpenSearch={() => {
-            setIsSearchMode(true);
-            setShowTextInput(true);
+            handleOpenGoogleSearch();
           }}
           onOpenInstall={() => setShowInstallModal(true)}
+          onOpenHardware={(tab) => {
+            setHardwareTab(tab || "torch");
+            setShowHardwareModal(true);
+          }}
+          onOpenMemory={() => setShowMemoryModal(true)}
+          onOpenLiveVision={() => setShowLiveVisionModal(true)}
+          activePersonName={activePerson.name}
         />
       </header>
 
@@ -1079,7 +1473,7 @@ export default function App() {
 
         {/* Center Visualizer (Fixed Full Screen Background) */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-          <Visualizer state={appState} sentiment={sentiment} />
+          <Visualizer state={appState} sentiment={sentiment} mode={assistantMode} />
         </div>
 
         {/* Right Column: User Status & Roasts */}
@@ -1147,13 +1541,113 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
+                    setLiveVisionInitialQuery("Look at this picture through the camera and tell me what all is in it ('usme kya kya hai')");
+                    setShowLiveVisionModal(true);
+                    setShowTextInput(false);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/50 text-[10px] font-mono font-bold text-cyan-200 hover:bg-cyan-500/30 shrink-0 cursor-pointer flex items-center gap-1 shadow-[0_0_10px_rgba(6,182,212,0.3)]"
+                >
+                  <Eye size={10} className="text-cyan-300 animate-pulse" />
+                  <span>📷 Live Camera Talk (Kya Kya Hai)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLiveVisionInitialQuery("Who is this person? Tell their name, age, and work.");
+                    setShowLiveVisionModal(true);
+                    setShowTextInput(false);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-purple-500/15 border border-purple-400/40 text-[10px] font-mono text-purple-200 hover:bg-purple-500/25 shrink-0 cursor-pointer flex items-center gap-1 shadow-sm"
+                >
+                  <span>👤 Person: Name, Age, Work</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleTextCommand(`Give details of ${activePerson.name}`);
+                    setShowTextInput(false);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-[10px] font-mono text-emerald-200 hover:bg-emerald-500/25 shrink-0 cursor-pointer flex items-center gap-1 shadow-sm"
+                >
+                  <span>📋 Details: Name, Age, Work</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMemoryModal(true);
+                    setShowTextInput(false);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-[10px] font-mono text-pink-300 hover:bg-pink-500/20 shrink-0 cursor-pointer flex items-center gap-1"
+                >
+                  <Brain size={10} className="text-pink-400" />
+                  <span>🧠 Memory Vault ({activePerson.name})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleTextCommand("Mera naam kya hai aur mere baare me kya yaad hai?");
+                    setShowTextInput(false);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[10px] font-mono text-cyan-300 hover:bg-cyan-500/20 shrink-0 cursor-pointer flex items-center gap-1"
+                >
+                  <Brain size={10} className="text-cyan-400" />
+                  <span>👤 Who am I?</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenGoogleSearch("Today's top world news and breaking stories");
+                    setShowTextInput(false);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-[10px] font-mono text-blue-300 hover:bg-blue-500/20 shrink-0 cursor-pointer flex items-center gap-1"
+                >
+                  <Search size={10} />
+                  <span>🔍 Google Search</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenGoogleSearch("Chromosome 21 (Down Syndrome)", "chromosome");
+                    setShowTextInput(false);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-300 hover:bg-emerald-500/20 shrink-0 cursor-pointer flex items-center gap-1"
+                >
+                  <Dna size={10} />
+                  <span>🧬 Chromosomes</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenGoogleSearch("https://en.wikipedia.org/wiki/Chromosome", "website");
+                    setShowTextInput(false);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[10px] font-mono text-cyan-300 hover:bg-cyan-500/20 shrink-0 cursor-pointer flex items-center gap-1"
+                >
+                  <Globe size={10} />
+                  <span>🌐 Web Browser</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleOpenWhatsApp("Alex", "+91 98765 43210", "Hey! How are you doing?");
+                    setShowTextInput(false);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-300 hover:bg-emerald-500/20 shrink-0 cursor-pointer flex items-center gap-1"
+                >
+                  <MessageSquare size={10} />
+                  <span>💬 WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhotoAutoStartCamera(true);
                     setShowPhotoModal(true);
                     setShowTextInput(false);
                   }}
                   className="px-2.5 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-[10px] font-mono text-pink-300 hover:bg-pink-500/20 shrink-0 cursor-pointer flex items-center gap-1"
                 >
                   <Camera size={10} />
-                  <span>📸 Camera Q&A</span>
+                  <span>📸 Open Camera</span>
                 </button>
                 <button
                   type="button"
@@ -1499,21 +1993,57 @@ export default function App() {
                                     <Globe size={10} /> SOURCES CONSULTED
                                   </p>
                                   <div className="grid grid-cols-1 gap-1.5">
-                                    {msg.searchCard.sources.map((src, sIdx) => (
-                                      <a
-                                        key={sIdx}
-                                        href={src.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-between p-2 rounded-lg bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/10 hover:border-cyan-500/20 text-[11px] text-white/80 hover:text-cyan-200 transition-all group truncate"
-                                      >
-                                        <span className="truncate pr-4 font-sans font-medium">{src.title}</span>
-                                        <ExternalLink size={10} className="text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
-                                      </a>
-                                    ))}
+                                    {msg.searchCard.sources.map((src, sIdx) => {
+                                      const safeUrl = cleanGroundingUrl(src.url, src.title, msg.searchCard?.query);
+                                      const isSearchEngine =
+                                        safeUrl.includes("google.com/search") ||
+                                        safeUrl.includes("news.google.com") ||
+                                        safeUrl.includes("bing.com") ||
+                                        safeUrl.includes("duckduckgo.com");
+                                      return (
+                                        <div
+                                          key={sIdx}
+                                          className="flex items-center justify-between p-2 rounded-lg bg-cyan-500/5 hover:bg-cyan-500/10 border border-cyan-500/10 hover:border-cyan-500/20 text-[11px] text-white/80 transition-all gap-2"
+                                        >
+                                          <span className="truncate font-sans font-medium flex-1">{src.title}</span>
+                                          <div className="flex items-center gap-1.5 shrink-0">
+                                            <a
+                                              href={safeUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="px-2.5 py-1 rounded-lg bg-cyan-500/25 hover:bg-cyan-500/40 text-cyan-200 hover:text-white text-[10px] font-mono flex items-center gap-1 transition-colors shadow-sm"
+                                              title="Open Source Link in New Tab"
+                                            >
+                                              <ExternalLink size={10} />
+                                              <span>Open</span>
+                                            </a>
+                                            {!isSearchEngine && (
+                                              <button
+                                                onClick={() => handleOpenGoogleSearch(safeUrl, "website")}
+                                                className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-cyan-300 text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors"
+                                                title="Read in Zoya Browser"
+                                              >
+                                                <Globe size={10} />
+                                                <span>Reader</span>
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
+
+                              <div className="mt-3 pt-2 border-t border-cyan-500/15 flex items-center justify-between">
+                                <button
+                                  onClick={() => handleOpenGoogleSearch(msg.searchCard!.query)}
+                                  className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 underline flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Search size={10} />
+                                  <span>Open in Advance Search Hub</span>
+                                </button>
+                              </div>
                             </motion.div>
                           )}
                         </div>

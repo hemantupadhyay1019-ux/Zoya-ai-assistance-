@@ -8,9 +8,10 @@ type VisualizerState = "idle" | "listening" | "processing" | "speaking";
 interface VisualizerProps {
   state: VisualizerState;
   sentiment: ZoyaSentiment;
+  mode?: "zoya" | "jarvis";
 }
 
-export default function Visualizer({ state, sentiment }: VisualizerProps) {
+export default function Visualizer({ state, sentiment, mode = "zoya" }: VisualizerProps) {
   const [isBlinking, setIsBlinking] = useState(false);
   const [mouthOpenAmount, setMouthOpenAmount] = useState(0);
 
@@ -56,7 +57,7 @@ export default function Visualizer({ state, sentiment }: VisualizerProps) {
     const baseSpeed = state === "listening" ? 3 : state === "processing" ? 1.5 : state === "speaking" ? 2 : 15;
     return {
       rotate: reverse ? [-360, 0] : [0, 360],
-      transition: { duration: baseSpeed + index * 2, repeat: Infinity, ease: "linear" }
+      transition: { duration: baseSpeed + index * 2, repeat: Infinity, ease: "linear" as const }
     };
   };
 
@@ -65,27 +66,27 @@ export default function Visualizer({ state, sentiment }: VisualizerProps) {
       return {
         scale: [1, 1.05, 0.98, 1.02, 1],
         opacity: [0.8, 1, 0.8, 1, 0.8],
-        transition: { duration: 0.5, repeat: Infinity, ease: "easeInOut" }
+        transition: { duration: 0.5, repeat: Infinity, ease: "easeInOut" as const }
       };
     }
     if (state === "listening") {
       return {
         scale: [1, 1.02, 1],
         opacity: [0.7, 1, 0.7],
-        transition: { duration: 1, repeat: Infinity, ease: "easeInOut" }
+        transition: { duration: 1, repeat: Infinity, ease: "easeInOut" as const }
       };
     }
     if (state === "processing") {
       return {
         scale: [0.98, 1.02, 0.98],
         opacity: [0.6, 0.9, 0.6],
-        transition: { duration: 0.8, repeat: Infinity, ease: "linear" }
+        transition: { duration: 0.8, repeat: Infinity, ease: "linear" as const }
       };
     }
     return {
       scale: [1, 1.01, 1],
       opacity: [0.4, 0.6, 0.4],
-      transition: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+      transition: { duration: 4, repeat: Infinity, ease: "easeInOut" as const }
     };
   };
 
@@ -101,7 +102,7 @@ export default function Visualizer({ state, sentiment }: VisualizerProps) {
           transition: {
             duration: 0.35,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut" as const
           }
         };
       } else if (sentiment === "sassy") {
@@ -114,7 +115,7 @@ export default function Visualizer({ state, sentiment }: VisualizerProps) {
           transition: {
             duration: 0.75,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut" as const
           }
         };
       } else {
@@ -125,7 +126,7 @@ export default function Visualizer({ state, sentiment }: VisualizerProps) {
           transition: {
             duration: 1.1,
             repeat: Infinity,
-            ease: "easeInOut"
+            ease: "easeInOut" as const
           }
         };
       }
@@ -139,7 +140,7 @@ export default function Visualizer({ state, sentiment }: VisualizerProps) {
         transition: {
           duration: 1.0,
           repeat: Infinity,
-          ease: "easeInOut"
+          ease: "easeInOut" as const
         }
       };
     }
@@ -153,7 +154,7 @@ export default function Visualizer({ state, sentiment }: VisualizerProps) {
         transition: {
           duration: 0.5,
           repeat: Infinity,
-          ease: "linear"
+          ease: "linear" as const
         }
       };
     }
@@ -165,7 +166,7 @@ export default function Visualizer({ state, sentiment }: VisualizerProps) {
       transition: {
         duration: 2.2,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut" as const
       }
     };
   };
@@ -322,7 +323,7 @@ export default function Visualizer({ state, sentiment }: VisualizerProps) {
         {/* Overlay banner with Zoya's name */}
         <div className="absolute bottom-0 left-0 w-full bg-black/60 backdrop-blur-sm py-1 md:py-1.5 text-center border-t border-white/10 z-20">
           <span 
-            className="font-mono text-[9px] md:text-[11px] tracking-[0.3em] font-bold text-white uppercase"
+            className="font-mono text-[9px] md:text-[11px] tracking-[0.3em] font-bold text-white uppercase flex items-center justify-center gap-1.5"
             style={{ textShadow: `0 0 10px ${theme.color}` }}
           >
             ZOYA
